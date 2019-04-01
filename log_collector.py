@@ -8,10 +8,12 @@ from PyQt5.QtWidgets import (QWidget, QLabel,
                              QComboBox, QApplication, QGridLayout, QPushButton, QLineEdit, QCheckBox)
 
 
-WORKING_PATH = os.path.dirname(os.path.abspath(__file__))
-LOG_ZIP_PATH = 'D:\downloads\\'
-BACK_SERVER_PATH = WORKING_PATH + "\credo"
-FRONT_SERVER_PATH = WORKING_PATH + "\credo_front"
+# WORKING_PATH = os.path.dirname(os.path.abspath(__file__))
+
+LOG_ZIP_PATH = os.path.join(os.path.expanduser('~'), 'downloads') # Downloads folder
+# BACK_SERVER_PATH = "D:\credo"
+# FRONT_SERVER_PATH = "D:\credo_front"
+
 logs_list = ['app.log', 'credo.log', 'ibank.log', 'request.log', 'server.log']
 # logs_list = []
 
@@ -24,15 +26,17 @@ class Example(QWidget):
 
 
     def initUI(self):
+        self.BACK_ERROR = False
+        self.FRONT_ERROR = False
 
-        self.log_path = "\\nodes\\node1\standalone\\"
+        self.log_path = "\\nodes\\node1\standalone\\log"
         self.copyLog = QPushButton('Copy logs')
         self.lbl1 = QLabel('back server path : ', self)
         self.lbl2 = QLabel('front server path: ', self)
         self.back_server_path = QLineEdit()
-        self.back_server_path.setText(BACK_SERVER_PATH)
+        self.back_server_path.setText("D:\credo")
         self.front_server_path = QLineEdit()
-        self.front_server_path.setText(FRONT_SERVER_PATH)
+        self.front_server_path.setText("D:\credo_front")
         self.back_check = QCheckBox('Copy back logs', self)
         self.front_check = QCheckBox('Copy front logs', self)
 
@@ -57,7 +61,8 @@ class Example(QWidget):
 
         self.lbl5 = QLabel('Enter request number: ', self)
         self.request_number_edit = QLineEdit()
-        self.lbl6 = QLabel('', self)    #result
+        self.lbl6 = QLabel('', self)    #result path
+        self.lbl7 = QLabel('', self)    #result file name
 
         grid = QGridLayout()
         # grid.setSpacing(5)
@@ -89,6 +94,7 @@ class Example(QWidget):
 
         grid.addWidget(self.copyLog, 13, 1)
         grid.addWidget(self.lbl6, 14, 0)
+        grid.addWidget(self.lbl7, 14, 1)
 
         self.back_check.setChecked(True)
         self.combo.activated[str].connect(self.combobox_node)
@@ -168,32 +174,52 @@ class Example(QWidget):
             logs_list.remove(checkbox.text())
         return logs_list
 
-    def create_zip(self, name, files):
+    def create_zip(self, name, files, number_request):
         node_name = self.get_node_name()
         self.log_path = "\\nodes\\" + node_name + "\standalone\\log\\"
         with zipfile.ZipFile(LOG_ZIP_PATH + name + '.zip', 'w', zipfile.ZIP_DEFLATED) as zip:
             if self.back_check.isChecked() == True:
                 for file in files:
-                    print(file)
-                    zip.write(BACK_SERVER_PATH + self.log_path + file, 'credo_' + file)
+                    zip.write(self.BACK_SERVER_PATH + self.log_path + file, 'credo_' + file)
             if self.front_check.isChecked() == True:
                 for file in files:
-                    print(file)
-                    zip.write(FRONT_SERVER_PATH + self.log_path + file, 'front_' + file)
+                    zip.write(self.FRONT_SERVER_PATH + self.log_path + file, 'front_' + file)
+        self.ERROR = False
+        return  self.lbl7.setText(number_request + ".zip is created")
 
     def create_zip_logs(self, number_request):
         self.lbl6.setText('')
 
-
-        if not (self.back_check.isChecked() == False and self.front_check.isChecked() == False):
-            if not number_request:
-                self.create_zip('logs', logs_list)
-                self.lbl6.setText('logs.zip is created')
-            else:
-                self.create_zip(number_request, logs_list)
-                self.lbl6.setText(number_request + ".zip is created")
-        else:
+        if  (self.back_check.isChecked() == False) and  (self.front_check.isChecked() == False):
             self.lbl6.setText('No selected server!!!')
+            self.BACK_ERROR = True
+            self.FRONT_ERROR = True
+        else:
+            self.BACK_ERROR = False
+            self.FRONT_ERROR = False
+
+        self.BACK_SERVER_PATH = self.back_server_path.text()
+        self.FRONT_SERVER_PATH = self.front_server_path.text()
+        if self.back_check.isChecked():
+            if os.path.isdir(self.BACK_SERVER_PATH) == False:
+                self.lbl6.setText('No exist back server dir')
+                self.BACK_ERROR = True
+            else:
+                self.BACK_ERROR = False
+        if self.front_check.isChecked():
+            if os.path.isdir(self.FRONT_SERVER_PATH) == False:
+                self.lbl6.setText('No exist front server dir')
+                self.FRONT_ERROR = True
+            else:
+                self.FRONT_ERROR = False
+
+
+        if not number_request:
+            number_request = 'logs'
+
+        if self.BACK_ERROR == False and self.FRONT_ERROR == False:
+            self.create_zip(number_request, logs_list, number_request)
+            self.lbl6.setText(LOG_ZIP_PATH + '\\')
 
 
 
