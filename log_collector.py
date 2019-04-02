@@ -4,8 +4,12 @@
 import zipfile
 import sys
 import os
+
+import stdiomask as stdiomask
 from PyQt5.QtWidgets import (QWidget, QLabel,
                              QComboBox, QApplication, QGridLayout, QPushButton, QLineEdit, QCheckBox)
+from skpy import Skype
+import getpass
 
 
 # WORKING_PATH = os.path.dirname(os.path.abspath(__file__))
@@ -15,7 +19,7 @@ LOG_ZIP_PATH = os.path.join(os.path.expanduser('~'), 'downloads') # Downloads fo
 # FRONT_SERVER_PATH = "D:\credo_front"
 
 logs_list = ['app.log', 'credo.log', 'ibank.log', 'request.log', 'server.log']
-# logs_list = []
+# contacts_list = []
 
 class Example(QWidget):
 
@@ -26,11 +30,16 @@ class Example(QWidget):
 
 
     def initUI(self):
+        self.login_skype = input('Enter your skype login:\n')
+        self.pass_skype = getpass.win_getpass('Enter your skype password:\n')
+        print('Get connect to Skype...')
+        self.sk = Skype(self.login_skype, self.pass_skype)  # connect to Skype
+        print(self.sk.conn)
         self.BACK_ERROR = False
         self.FRONT_ERROR = False
 
         self.log_path = "\\nodes\\node1\standalone\\log"
-        self.copyLog = QPushButton('Copy logs')
+        self.send_logs = QPushButton('Send logs')
         self.lbl1 = QLabel('back server path : ', self)
         self.lbl2 = QLabel('front server path: ', self)
         self.back_server_path = QLineEdit()
@@ -46,6 +55,12 @@ class Example(QWidget):
         self.combo = QComboBox(self)
         self.combo.addItems(["node1", "node2", "node3", "node4", "node5", "node6", "node7",
                               "node8", "node9", "other"])
+
+        self.user_list_combo = QComboBox(self)
+        self.users_name = self.user_list()
+        self.user_list_combo.addItems([str(user) for user in self.users_name.values()])
+
+
         self.other_node_edit = QLineEdit()
 
         self.lbl3.setText("Selected Node: " + str(self.combo.itemText(self.combo.currentIndex())))
@@ -65,7 +80,6 @@ class Example(QWidget):
         self.lbl7 = QLabel('', self)    #result file name
 
         grid = QGridLayout()
-        # grid.setSpacing(5)
 
         grid.addWidget(self.lbl1, 1, 0)
         grid.addWidget(self.back_server_path, 1, 1)
@@ -92,12 +106,14 @@ class Example(QWidget):
         grid.addWidget(self.lbl5, 12, 0)
         grid.addWidget(self.request_number_edit, 12, 1)
 
-        grid.addWidget(self.copyLog, 13, 1)
+        grid.addWidget(self.send_logs, 13, 1)
+        grid.addWidget(self.user_list_combo, 13, 0)
         grid.addWidget(self.lbl6, 14, 0)
         grid.addWidget(self.lbl7, 14, 1)
 
         self.back_check.setChecked(True)
         self.combo.activated[str].connect(self.combobox_node)
+        self.user_list_combo.activated[str].connect(self.get_user_id)
 
         self.other_node_edit.setDisabled(True)
         self.app_log.setChecked(True)
@@ -106,12 +122,13 @@ class Example(QWidget):
         self.request_log.setChecked(True)
         self.server_log.setChecked(True)
 
-        self.copyLog.clicked.connect(lambda: self.create_zip_logs(self.request_number_edit.text()))
+        self.send_logs.clicked.connect(lambda: self.push_btn_send_logs(self.request_number_edit.text()))
 
         self.setLayout(grid)
         self.setGeometry(300, 300, 300, 200)
         self.setWindowTitle('Log collector')
         self.show()
+
 
         self.request_number_edit.setFocus()
         self.app_log.stateChanged.connect(lambda: self.select_app_logs(self.app_log))
@@ -119,6 +136,10 @@ class Example(QWidget):
         self.credo_log.stateChanged.connect(lambda: self.select_credo_logs(self.credo_log))
         self.request_log.stateChanged.connect(lambda: self.select_request_logs(self.request_log))
         self.server_log.stateChanged.connect(lambda: self.select_server_logs(self.server_log))
+
+    def get_user_id(self, names):
+        user_id = [id for id, name in self.users_name.items() if str(name) == names]
+        return user_id[0]
 
     def combobox_node(self, text):
         if text != 'other':
@@ -174,10 +195,10 @@ class Example(QWidget):
             logs_list.remove(checkbox.text())
         return logs_list
 
-    def create_zip(self, name, files, number_request):
+    def create_zip(self, name, files):
         node_name = self.get_node_name()
         self.log_path = "\\nodes\\" + node_name + "\standalone\\log\\"
-        with zipfile.ZipFile(LOG_ZIP_PATH + name + '.zip', 'w', zipfile.ZIP_DEFLATED) as zip:
+        with zipfile.ZipFile(LOG_ZIP_PATH + '\\' + name + '.zip', 'w', zipfile.ZIP_DEFLATED) as zip:
             if self.back_check.isChecked() == True:
                 for file in files:
                     zip.write(self.BACK_SERVER_PATH + self.log_path + file, 'credo_' + file)
@@ -185,9 +206,12 @@ class Example(QWidget):
                 for file in files:
                     zip.write(self.FRONT_SERVER_PATH + self.log_path + file, 'front_' + file)
         self.ERROR = False
-        return  self.lbl7.setText(number_request + ".zip is created")
+        user = str(self.user_list_combo.itemText(self.user_list_combo.currentIndex()))
+        user_id = self.get_user_id(user)
+        self.create_skype_chat(user_id, name + ".zip")
+        return  self.lbl7.setText(name + ".zip is created")
 
-    def create_zip_logs(self, number_request):
+    def push_btn_send_logs(self, number_request):
         self.lbl6.setText('')
 
         if  (self.back_check.isChecked() == False) and  (self.front_check.isChecked() == False):
@@ -218,10 +242,23 @@ class Example(QWidget):
             number_request = 'logs'
 
         if self.BACK_ERROR == False and self.FRONT_ERROR == False:
-            self.create_zip(number_request, logs_list, number_request)
+            self.create_zip(number_request, logs_list)
             self.lbl6.setText(LOG_ZIP_PATH + '\\')
 
+    def user_list(self):
+        self.sk.contacts[self.sk.user.id].chat # для выполнения следующих задач. Без строки не работает
+        groupe_user_list = self.sk.contacts.groups['ITWORKS'].userIds
+        ITWORKS_GROUPE = {}
+        for user in groupe_user_list:
+            user_id = self.sk.contacts.user(user).id
+            user_name = self.sk.contacts.user(user).name
+            ITWORKS_GROUPE[user_id] = user_name
+        return ITWORKS_GROUPE
 
+    def create_skype_chat(self, user, file):
+        chat = self.sk.contacts[user].chat
+        chat.sendMsg('логи по заявке ' + file)
+        chat.sendFile(open(LOG_ZIP_PATH + '\\' + file, "rb"), file)
 
 if __name__ == '__main__':
 
