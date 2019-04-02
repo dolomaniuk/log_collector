@@ -4,22 +4,14 @@
 import zipfile
 import sys
 import os
-
-import stdiomask as stdiomask
 from PyQt5.QtWidgets import (QWidget, QLabel,
                              QComboBox, QApplication, QGridLayout, QPushButton, QLineEdit, QCheckBox)
 from skpy import Skype
 import getpass
 
 
-# WORKING_PATH = os.path.dirname(os.path.abspath(__file__))
-
 LOG_ZIP_PATH = os.path.join(os.path.expanduser('~'), 'downloads') # Downloads folder
-# BACK_SERVER_PATH = "D:\credo"
-# FRONT_SERVER_PATH = "D:\credo_front"
-
 logs_list = ['app.log', 'credo.log', 'ibank.log', 'request.log', 'server.log']
-# contacts_list = []
 
 class Example(QWidget):
 
@@ -35,6 +27,7 @@ class Example(QWidget):
         print('Get connect to Skype...')
         self.sk = Skype(self.login_skype, self.pass_skype)  # connect to Skype
         print(self.sk.conn)
+
         self.BACK_ERROR = False
         self.FRONT_ERROR = False
 
@@ -245,15 +238,24 @@ class Example(QWidget):
             self.create_zip(number_request, logs_list)
             self.lbl6.setText(LOG_ZIP_PATH + '\\')
 
+    # def user_list(self):
+    #     self.sk.contacts[self.sk.user.id].chat # для выполнения следующих задач. Без строки не работает
+    #     groupe_user_list = self.sk.contacts.groups['ITWORKS'].userIds
+    #     ITWORKS_GROUPE = {}
+    #     for user in groupe_user_list:
+    #         user_id = self.sk.contacts.user(user).id
+    #         user_name = self.sk.contacts.user(user).name
+    #         ITWORKS_GROUPE[user_id] = user_name
+    #     return ITWORKS_GROUPE
+
     def user_list(self):
         self.sk.contacts[self.sk.user.id].chat # для выполнения следующих задач. Без строки не работает
-        groupe_user_list = self.sk.contacts.groups['ITWORKS'].userIds
-        ITWORKS_GROUPE = {}
-        for user in groupe_user_list:
-            user_id = self.sk.contacts.user(user).id
-            user_name = self.sk.contacts.user(user).name
-            ITWORKS_GROUPE[user_id] = user_name
-        return ITWORKS_GROUPE
+        userId_list = self.sk.contacts
+        SKYPE_USERS = {}
+        for user in userId_list:
+            if str(user.name):
+                SKYPE_USERS[str(user.id)] = str(user.name)
+        return SKYPE_USERS
 
     def create_skype_chat(self, user, file):
         chat = self.sk.contacts[user].chat
