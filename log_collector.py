@@ -11,7 +11,7 @@ import getpass
 
 # TODO: сделать проверку на существование файлов, а не директории
 LOG_ZIP_PATH = os.path.join(os.path.expanduser('~'), 'downloads') # Downloads folder
-logs_list = ['app.log', 'credo.log', 'ibank.log', 'request.log', 'server.log']
+logs_list = ['app.log', 'credo.log', 'ibank.log', 'iss.log', 'request.log', 'server.log']
 
 class Example(QWidget):
 
@@ -53,17 +53,15 @@ class Example(QWidget):
         self.users_name = self.user_list()
         self.user_list_combo.addItems([str(user) for user in self.users_name.values()])
 
-
         self.other_node_edit = QLineEdit()
 
         self.lbl3.setText("Selected Node: " + str(self.combo.itemText(self.combo.currentIndex())))
-
-
 
         self.lbl4 = QLabel('Select logs: ', self)
         self.app_log = QCheckBox('app.log')
         self.credo_log = QCheckBox('credo.log')
         self.ibank_log = QCheckBox('ibank.log')
+        self.iss_log = QCheckBox('iss.log')
         self.request_log = QCheckBox('request.log')
         self.server_log = QCheckBox('server.log')
 
@@ -94,6 +92,7 @@ class Example(QWidget):
         grid.addWidget(self.credo_log, 9, 1)
         grid.addWidget(self.ibank_log, 10, 0)
         grid.addWidget(self.request_log, 10, 1)
+        grid.addWidget(self.iss_log, 11, 0)
         grid.addWidget(self.server_log, 11, 1)
 
         grid.addWidget(self.lbl5, 12, 0)
@@ -112,6 +111,7 @@ class Example(QWidget):
         self.app_log.setChecked(True)
         self.credo_log.setChecked(True)
         self.ibank_log.setChecked(True)
+        self.iss_log.setChecked(True)
         self.request_log.setChecked(True)
         self.server_log.setChecked(True)
 
@@ -126,6 +126,7 @@ class Example(QWidget):
         self.request_number_edit.setFocus()
         self.app_log.stateChanged.connect(lambda: self.select_app_logs(self.app_log))
         self.ibank_log.stateChanged.connect(lambda: self.select_ibank_logs(self.ibank_log))
+        self.ibank_log.stateChanged.connect(lambda: self.select_iss_logs(self.iss_log))
         self.credo_log.stateChanged.connect(lambda: self.select_credo_logs(self.credo_log))
         self.request_log.stateChanged.connect(lambda: self.select_request_logs(self.request_log))
         self.server_log.stateChanged.connect(lambda: self.select_server_logs(self.server_log))
@@ -156,11 +157,19 @@ class Example(QWidget):
     def select_app_logs(self, checkbox):
         if checkbox.isChecked() == True:
             logs_list.append(checkbox.text())
+
         else:
             logs_list.remove(checkbox.text())
         return logs_list
 
     def select_ibank_logs(self, checkbox):
+        if checkbox.isChecked() == True:
+            logs_list.append(checkbox.text())
+        else:
+            logs_list.remove(checkbox.text())
+        return logs_list
+
+    def select_iss_logs(self, checkbox):
         if checkbox.isChecked() == True:
             logs_list.append(checkbox.text())
         else:
@@ -189,15 +198,13 @@ class Example(QWidget):
         return logs_list
 
     def create_zip(self, name, files):
-        node_name = self.get_node_name()
-        self.log_path = "\\nodes\\" + node_name + "\standalone\\log\\"
         with zipfile.ZipFile(LOG_ZIP_PATH + '\\' + name + '.zip', 'w', zipfile.ZIP_DEFLATED) as zip:
-            if self.back_check.isChecked() == True:
+            try:
                 for file in files:
-                    zip.write(self.BACK_SERVER_PATH + self.log_path + file, 'credo_' + file)
-            if self.front_check.isChecked() == True:
-                for file in files:
-                    zip.write(self.FRONT_SERVER_PATH + self.log_path + file, 'front_' + file)
+                    prefix = file.split('\\')[-6] + '_' # credo or front
+                    zip.write(file, prefix + file.split('\\')[-1])
+            except:
+                self.lbl7.setText("zip is empty!!!")
         self.ERROR = False
         user = str(self.user_list_combo.itemText(self.user_list_combo.currentIndex()))
         user_id = self.get_user_id(user)
@@ -205,6 +212,13 @@ class Example(QWidget):
         return  self.lbl7.setText(name + ".zip is created")
 
     def push_btn_send_logs(self, number_request):
+        self.files_to_zip = []
+        self.BACK_SERVER_PATH = self.back_server_path.text()
+        self.FRONT_SERVER_PATH = self.front_server_path.text()
+        node_name = self.get_node_name()
+        self.log_path = "\\nodes\\" + node_name + "\standalone\\log\\"
+        self.back_log_path = self.BACK_SERVER_PATH + self.log_path
+        self.front_log_path = self.FRONT_SERVER_PATH + self.log_path
         self.lbl6.setText('')
 
         if  (self.back_check.isChecked() == False) and  (self.front_check.isChecked() == False):
@@ -215,8 +229,6 @@ class Example(QWidget):
             self.BACK_ERROR = False
             self.FRONT_ERROR = False
 
-        self.BACK_SERVER_PATH = self.back_server_path.text()
-        self.FRONT_SERVER_PATH = self.front_server_path.text()
         if self.back_check.isChecked():
             if os.path.isdir(self.BACK_SERVER_PATH) == False:
                 self.lbl6.setText('No exist back server dir')
@@ -230,12 +242,18 @@ class Example(QWidget):
             else:
                 self.FRONT_ERROR = False
 
-
         if not number_request:
             number_request = 'logs'
 
         if self.BACK_ERROR == False and self.FRONT_ERROR == False:
-            self.create_zip(number_request, logs_list)
+            if self.back_check.isChecked() == True:
+                for file in logs_list:
+                    self.files_to_zip += self.get_all_log_files(file, self.back_log_path)
+            if self.front_check.isChecked() == True:
+                for file in logs_list:
+                    self.files_to_zip += self.get_all_log_files(file, self.front_log_path)
+
+            self.create_zip(number_request, self.files_to_zip)
             self.lbl6.setText(LOG_ZIP_PATH + '\\')
 
     # def user_list(self):
@@ -261,6 +279,15 @@ class Example(QWidget):
         chat = self.sk.contacts[user].chat
         chat.sendMsg('логи по заявке ' + file)
         chat.sendFile(open(LOG_ZIP_PATH + '\\' + file, "rb"), file)
+
+    def get_all_log_files(self, log_name, log_path):
+        logs_in_dir = []
+        all_files_in_dir = os.listdir(log_path)
+        logs = filter(lambda x: x.startswith(log_name), all_files_in_dir)
+        for file in logs:
+            logs_in_dir.append(log_path + file)
+        return logs_in_dir
+
 
 if __name__ == '__main__':
 
