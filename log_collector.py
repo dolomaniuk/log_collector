@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (QWidget, QLabel,
 from skpy import Skype
 import getpass
 
-
+# TODO: сделать проверку на существование файлов, а не директории
 LOG_ZIP_PATH = os.path.join(os.path.expanduser('~'), 'downloads') # Downloads folder
 logs_list = ['app.log', 'credo.log', 'ibank.log', 'request.log', 'server.log']
 
