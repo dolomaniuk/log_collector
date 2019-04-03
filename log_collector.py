@@ -7,7 +7,7 @@ import os
 from PyQt5.QtWidgets import (QWidget, QLabel,
                              QComboBox, QApplication, QGridLayout, QPushButton, QLineEdit, QCheckBox)
 from skpy import Skype
-import getpass
+# import getpass
 
 # TODO: сделать проверку на существование файлов, а не директории
 LOG_ZIP_PATH = os.path.join(os.path.expanduser('~'), 'downloads') # Downloads folder
@@ -22,11 +22,16 @@ class Example(QWidget):
 
 
     def initUI(self):
-        self.login_skype = input('Enter your skype login:\n')
-        self.pass_skype = getpass.win_getpass('Enter your skype password:\n')
-        print('Get connect to Skype...')
-        self.sk = Skype(self.login_skype, self.pass_skype)  # connect to Skype
-        print(self.sk.conn)
+        skype_data = self.skype_connect()
+        if len(skype_data) > 0:
+            try:
+                print('Get connect to Skype...')
+                self.sk = Skype(skype_data[0], skype_data[1])  # connect to Skype
+                print(self.sk.conn)
+            except:
+                pass
+        # self.login_skype = input('Enter your skype login:\n')
+        # self.pass_skype = getpass.win_getpass('Enter your skype password:\n')
 
         self.BACK_ERROR = False
         self.FRONT_ERROR = False
@@ -50,8 +55,11 @@ class Example(QWidget):
                               "node8", "node9", "other"])
 
         self.user_list_combo = QComboBox(self)
-        self.users_name = self.user_list()
-        self.user_list_combo.addItems([str(user) for user in self.users_name.values()])
+        try:
+            self.users_name = self.user_list()
+            self.user_list_combo.addItems([str(user) for user in self.users_name.values()])
+        except:
+            pass
 
         self.other_node_edit = QLineEdit()
 
@@ -131,6 +139,17 @@ class Example(QWidget):
         self.request_log.stateChanged.connect(lambda: self.select_request_logs(self.request_log))
         self.server_log.stateChanged.connect(lambda: self.select_server_logs(self.server_log))
 
+    def skype_connect(self):
+        skype_data = []
+        data_file = 'skype'
+        if os.path.isfile(data_file):
+            with open(data_file, 'r') as file:
+                for line in file.readlines():
+                    skype_data.append(line.split()[0])
+        else:
+            print('No found "skype" files in program dir')
+        return skype_data
+
     def get_user_id(self, names):
         user_id = [id for id, name in self.users_name.items() if str(name) == names]
         return user_id[0]
@@ -206,9 +225,12 @@ class Example(QWidget):
             except:
                 self.lbl7.setText("zip is empty!!!")
         self.ERROR = False
-        user = str(self.user_list_combo.itemText(self.user_list_combo.currentIndex()))
-        user_id = self.get_user_id(user)
-        self.create_skype_chat(user_id, name + ".zip")
+        try:
+            user = str(self.user_list_combo.itemText(self.user_list_combo.currentIndex()))
+            user_id = self.get_user_id(user)
+            self.create_skype_chat(user_id, name + ".zip")
+        except:
+            pass
         return  self.lbl7.setText(name + ".zip is created")
 
     def push_btn_send_logs(self, number_request):
