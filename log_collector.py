@@ -153,7 +153,8 @@ class Example(QWidget):
         return skype_data
 
     def get_user_id(self, names):
-        user_id = [id for id, name in self.users_name.items() if str(name) == names]
+        with open('skype_users', 'r') as file:
+            user_id = [id.split(' = ')[0] for id in file.readlines() if id.split(' = ')[-1].split('\n')[0] == names]
         return user_id[0]
 
     def combobox_node(self, text):
@@ -279,16 +280,6 @@ class Example(QWidget):
 
             self.create_zip(number_request, self.files_to_zip)
             self.lbl6.setText(LOG_ZIP_PATH + '\\')
-
-    # def user_list(self):
-    #     self.sk.contacts[self.sk.user.id].chat # для выполнения следующих задач. Без строки не работает
-    #     groupe_user_list = self.sk.contacts.groups['ITWORKS'].userIds
-    #     ITWORKS_GROUPE = {}
-    #     for user in groupe_user_list:
-    #         user_id = self.sk.contacts.user(user).id
-    #         user_name = self.sk.contacts.user(user).name
-    #         ITWORKS_GROUPE[user_id] = user_name
-    #     return ITWORKS_GROUPE
 
     def user_list(self):
         """
