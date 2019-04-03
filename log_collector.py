@@ -30,8 +30,8 @@ class Example(QWidget):
                 print(self.sk.conn)
             except:
                 pass
-        # self.login_skype = input('Enter your skype login:\n')
-        # self.pass_skype = getpass.win_getpass('Enter your skype password:\n')
+        # self.login_skype = input('Enter your skype_connect login:\n')
+        # self.pass_skype = getpass.win_getpass('Enter your skype_connect password:\n')
 
         self.BACK_ERROR = False
         self.FRONT_ERROR = False
@@ -57,7 +57,9 @@ class Example(QWidget):
         self.user_list_combo = QComboBox(self)
         try:
             self.users_name = self.user_list()
-            self.user_list_combo.addItems([str(user) for user in self.users_name.values()])
+            # self.user_list_combo.addItems([str(user) for user in self.users_name.values()])
+            with open('skype_users', 'r') as file:
+                self.user_list_combo.addItems([user.split(' = ')[-1].split('\n')[0] for user in file])
         except:
             pass
 
@@ -141,13 +143,13 @@ class Example(QWidget):
 
     def skype_connect(self):
         skype_data = []
-        data_file = 'skype'
+        data_file = 'skype_connect'
         if os.path.isfile(data_file):
             with open(data_file, 'r') as file:
                 for line in file.readlines():
                     skype_data.append(line.split()[0])
         else:
-            print('No found "skype" files in program dir')
+            print('No found "skype_connect" files in program dir')
         return skype_data
 
     def get_user_id(self, names):
@@ -289,12 +291,21 @@ class Example(QWidget):
     #     return ITWORKS_GROUPE
 
     def user_list(self):
+        """
+        При первом запуске будет создан файл 'skype_users' со списком ваши контактов, которые будут отображаться в
+        выпадающем списке программы. Можно поудалять лишние
+        :return:
+        """
         self.sk.contacts[self.sk.user.id].chat # для выполнения следующих задач. Без строки не работает
         userId_list = self.sk.contacts
         SKYPE_USERS = {}
-        for user in userId_list:
-            if str(user.name):
-                SKYPE_USERS[str(user.id)] = str(user.name)
+        skype_users = 'skype_users'
+        if not os.path.isfile(skype_users):
+            with open(skype_users, 'w') as file:
+                for user in userId_list:
+                    if str(user.name):
+                        SKYPE_USERS[str(user.id)] = str(user.name)
+                        file.write(str(user.id) + ' = ' + str(user.name) + '\n')
         return SKYPE_USERS
 
     def create_skype_chat(self, user, file):
